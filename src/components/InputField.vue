@@ -48,7 +48,7 @@
         <div
             v-for="t in tickers"
             :key="t.name"
-            @click="selected = t"
+            @click="select(t)"
             v-bind:class="{
                 'border-4': selected === t
             }"
@@ -56,7 +56,7 @@
         >
           <div class="px-4 py-5 sm:p-6 text-center">
             <dt class="text-sm font-medium text-gray-500 truncate">
-              {{t.name}}
+              {{t.name + ' ' + 'EUR'}}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900">
               {{t.preis}}
@@ -97,9 +97,12 @@
       </h3>
       <div v-if="selected" class="flex items-end border-gray-600 border-b border-l h-64">
         <div
-          class="bg-purple-800 border w-10 h-24"
+          v-for="(bar, idx) in normalizeGraph()"
+          :key="idx"
+          :style="{ height: `${bar}%` }"
+          class="bg-purple-800 border w-10"
         ></div>
-        <div
+        <!-- <div
           class="bg-purple-800 border w-10 h-32"
         ></div>
         <div
@@ -107,7 +110,7 @@
         ></div>
         <div
           class="bg-purple-800 border w-10 h-16"
-        ></div>
+        ></div> -->
       </div>
       <button
         @click="selected = null"
@@ -155,26 +158,46 @@ export default {
     name: "InputField",
     data() {
         return {
-            inputText: "default",
-            tickers: [
-                {name: "Demo", preis: "-"},
-                {name: "Demo_2", preis: "-"},
-            ],
+            inputText: "",
+            tickers: [],
             selected: null,
+            graph: [],
         }
     },
     methods: {
         add() {
+            const newTicker = {name: this.inputText, preis: "-"}
+            this.tickers.push(newTicker);
             
-            this.tickers.push({name:this.inputText, preis: "-"});
-            console.log(this.tickers);
+            // console.log(this.tickers);
+
+            setInterval(async () => {
+            const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=EUR&api_key={9e1f59dbe20b29de075e41298ba88685556e4438f0d6d9f019c4db604d7a0f22}`);
+            const data = await f.json();
+            this.tickers.find(t => t.name === newTicker.name).preis = data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
+            if(this.selected?.name === newTicker.name) {
+                this.graph.push(data.EUR);
+            }
+            
+            }, 5000);
+            
+            this.inputText = "";
+            
         },
         deleteValue(t) {
-            console.log(t);
             this.tickers = this.tickers.filter(e => e !== t);
             // this.tickers.splice(this.tickers.indexOf(t), 1);
-            console.log(this.tickers.indexOf(t));
-        }
+        },
+        normalizeGraph() {
+            const maxValue = Math.max(...this.graph);
+            const minValue = Math.min(...this.graph);
+            return this.graph.map(price => 5 + ((price - minValue) * 95) / (maxValue - minValue));
+            
+        },
+        select(ticker) {
+            this.selected = ticker;
+            this.graph = [];
+        },
     }
 }
 </script>
