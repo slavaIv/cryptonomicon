@@ -10,6 +10,7 @@
             <input
               v-model="inputText"
               v-on:keydown.enter="add"
+              v-on:input="setDouble(), getCurrList()"
               type="text"
               name="wallet"
               id="wallet"
@@ -19,6 +20,11 @@
           </div>
         </div>
       </div>
+
+
+    <div v-if="doubleName">
+        Такой тикер уже добавлен
+    </div>
 
     <button
         @click="add"
@@ -162,18 +168,32 @@ export default {
             tickers: [],
             selected: null,
             graph: [],
+            doubleName: false,
+            currencyList: {},
+            propCurr: {},
         }
     },
     methods: {
         add() {
             const newTicker = {name: this.inputText, preis: "-"}
-            this.tickers.push(newTicker);
+
+
             
-            // console.log(this.tickers);
+            const param = this.tickers.find(t => t.name === newTicker.name);
+            if(param !== undefined) {
+                this.doubleName = true;
+                return;
+            }
+            
+
+
+            this.tickers.push(newTicker);
 
             setInterval(async () => {
             const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=EUR&api_key={9e1f59dbe20b29de075e41298ba88685556e4438f0d6d9f019c4db604d7a0f22}`);
             const data = await f.json();
+
+
             this.tickers.find(t => t.name === newTicker.name).preis = data.EUR > 1 ? data.EUR.toFixed(2) : data.EUR.toPrecision(2);
             if(this.selected?.name === newTicker.name) {
                 this.graph.push(data.EUR);
@@ -198,6 +218,23 @@ export default {
             this.selected = ticker;
             this.graph = [];
         },
+        setDouble() {
+            this.doubleName = false;
+        },
+        async getCurrList() {
+            const currencyList = await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true');
+            const list = await currencyList.json();
+            this.currencyList = list.Data;
+            console.log(this.currencyList);
+            this.currCompare();
+        },
+        currCompare() {
+            console.log(this.currencyList);
+            for(let t in this.currencyList) {
+                // console.log(this.inputText.matchAll(t.Fullname));
+                console.log(t.Fullname);
+            }
+        }
     }
 }
 </script>
